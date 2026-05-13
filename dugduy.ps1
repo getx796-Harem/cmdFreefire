@@ -1,11 +1,12 @@
 # ============================================================
-# dugduy.ps1 - PEDPRO STORE (FIXED CONNECTION)
+# dugduy.ps1 - PEDPRO STORE - COMPLETE FIXED VERSION
 # ============================================================
 
-# บังคับให้ PowerShell ใช้ TLS 1.2 ในการเชื่อมต่อ (แก้ปัญหา Connection Error)
+# 1. การตั้งค่าความปลอดภัยและการเชื่อมต่อ (FIX: Connection Error)
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+$ProgressPreference = 'SilentlyContinue'
 
-# ข้อมูล API จากภาพของคุณ
+# 2. ข้อมูล API จาก KeyAuth Dashboard
 $OwnerID   = "vGgzXjkfQj" 
 $AppName   = "GetX"
 $AppSecret = "c394cd53bf649b6c32ba7c7b37685554e7d44638323fc0858e87cc2f0088910d" 
@@ -16,19 +17,19 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "       WELCOME TO PEDPRO STORE          " -ForegroundColor White
 Write-Host "========================================" -ForegroundColor Cyan
 
-# 1. KeyAuth Login Process
+# 3. ระบบ KeyAuth Login (ใช้ .cc เพื่อความเสถียร)
 $userKey = Read-Host "[?] Please enter your License Key"
-Write-Host "[*] Connecting to Auth Server..." -ForegroundColor Gray
+Write-Host "[*] Connecting to PEDPRO Server..." -ForegroundColor Gray
 
-$authUrl = "https://keyauth.win/api/1.1/?type=init&name=$AppName&ownerid=$OwnerID&ver=$Version"
+$authUrl = "https://keyauth.cc/api/1.1/?type=init&name=$AppName&ownerid=$OwnerID&ver=$Version"
 
 try {
-    # เพิ่ม User-Agent เพื่อป้องกันโดน Cloudflare บล็อก
+    # เชื่อมต่อเพื่อขอ Session ID
     $initReq = Invoke-RestMethod -Uri $authUrl -Method Get -TimeoutSec 15 -UserAgent "Mozilla/5.0"
     
     if ($initReq.success -eq "true") {
         $sessionid = $initReq.sessionid
-        $loginUrl = "https://keyauth.win/api/1.1/?type=license&key=$userKey&sessionid=$sessionid&name=$AppName&ownerid=$OwnerID"
+        $loginUrl = "https://keyauth.cc/api/1.1/?type=license&key=$userKey&sessionid=$sessionid&name=$AppName&ownerid=$OwnerID"
         $loginReq = Invoke-RestMethod -Uri $loginUrl -Method Get -UserAgent "Mozilla/5.0"
 
         if ($loginReq.success -ne "true") {
@@ -36,28 +37,28 @@ try {
             Write-Host "[!] Press any key to exit..." -ForegroundColor Yellow
             $null = [Console]::ReadKey(); exit
         }
-        Write-Host "[+] Login Successful! Welcome." -ForegroundColor Green
+        Write-Host "[+] Login Successful! Welcome to PEDPRO STORE." -ForegroundColor Green
     } else {
         Write-Host "[-] INIT ERROR: $($initReq.message)" -ForegroundColor Red
-        Write-Host "[!] Check AppName/OwnerID again." -ForegroundColor Yellow
+        Write-Host "[!] Check your App Status on Dashboard." -ForegroundColor Yellow
         $null = [Console]::ReadKey(); exit
     }
 } catch {
-    Write-Host "[-] CRITICAL CONNECTION ERROR" -ForegroundColor Red
+    Write-Host "[-] CONNECTION ERROR: Server unreachable." -ForegroundColor Red
     Write-Host "[!] Details: $($_.Exception.Message)" -ForegroundColor Yellow
-    Write-Host "[*] SUGGESTION: Turn off Windows Defender / Firewall and try again." -ForegroundColor Gray
+    Write-Host "[*] Try turning off Windows Defender/Antivirus." -ForegroundColor Gray
     Write-Host "[*] Press any key to close..." -ForegroundColor Gray
     $null = [Console]::ReadKey(); exit
 }
 
-# 2. Administrator Privilege Check
+# 4. ตรวจสอบสิทธิ์ Administrator
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "[*] Requesting Admin rights..." -ForegroundColor Yellow
+    Write-Host "[*] Escalating to Admin..." -ForegroundColor Yellow
     Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command `"iex ((iwr 'https://raw.githubusercontent.com/getx796-Harem/cmdFreefire/main/dugduy.ps1' -UseBasicParsing).Content)`"" -Verb RunAs
     exit
 }
 
-# 3. File & Stealth Setup (ตัวเดิมของคุณ)
+# 5. การเตรียมไฟล์และการพรางตัว (Stealth Mode)
 $url = "https://github.com/getx796-Harem/cmdFreefire/releases/download/v1.0/AimbotFemaleFix.dll"
 $fakeName = "mscories.dll"
 $workDir = "$env:LOCALAPPDATA\Microsoft\CLR_v4.0"
@@ -68,12 +69,16 @@ if (Test-Path $workDir) { Remove-Item $workDir -Recurse -Force -ErrorAction Sile
 New-Item -ItemType Directory -Path $workDir -Force | Out-Null
 attrib +h +s $workDir
 
-# 4. Silent Download
-Write-Host "[*] Downloading components..." -ForegroundColor Gray
-$ProgressPreference = 'SilentlyContinue'
-Invoke-WebRequest -Uri $url -OutFile $dllPath -UseBasicParsing -ErrorAction SilentlyContinue
+# 6. ดาวน์โหลดไฟล์ DLL แบบเงียบ
+Write-Host "[*] Fetching internal components..." -ForegroundColor Gray
+try {
+    Invoke-WebRequest -Uri $url -OutFile $dllPath -UseBasicParsing -ErrorAction Stop
+} catch {
+    Write-Host "[-] DOWNLOAD ERROR: Could not get DLL file." -ForegroundColor Red
+    Pause; exit
+}
 
-# 5. C# Injector Source (ตัวเดิมของคุณ)
+# 7. โค้ด Injection (รันใน RAM)
 $Source = @"
 using System;
 using System.Runtime.InteropServices;
@@ -99,32 +104,38 @@ public class Injector {
 }
 "@
 
-# 6. Injection Logic
-if (Test-Path $dllPath) {
-    $proc = Get-Process -Name $targetProcess -ErrorAction SilentlyContinue
-    if (!$proc) {
-        Write-Host "[*] Launching BlueStacks..." -ForegroundColor Yellow
-        if (Test-Path "C:\Program Files\BlueStacks_nxt\HD-Player.exe") {
-            Start-Process "C:\Program Files\BlueStacks_nxt\HD-Player.exe"
-            Start-Sleep -Seconds 8
-            $proc = Get-Process -Name $targetProcess -ErrorAction SilentlyContinue
-        }
-    }
-
-    if ($proc) {
-        Write-Host "[+] Injecting to $targetProcess..." -ForegroundColor Cyan
-        Add-Type -TypeDefinition $Source -ErrorAction SilentlyContinue
-        [Injector]::Inject($proc.Id, $dllPath)
-        Write-Host "[+] SUCCESS: Inject Complete!" -ForegroundColor Green
+# 8. เริ่มการ Inject เข้า Bluestacks
+$proc = Get-Process -Name $targetProcess -ErrorAction SilentlyContinue
+if (!$proc) {
+    Write-Host "[!] $targetProcess not found. Launching..." -ForegroundColor Yellow
+    if (Test-Path "C:\Program Files\BlueStacks_nxt\HD-Player.exe") {
+        Start-Process "C:\Program Files\BlueStacks_nxt\HD-Player.exe"
+        Start-Sleep -Seconds 10
+        $proc = Get-Process -Name $targetProcess -ErrorAction SilentlyContinue
     }
 }
 
-# 7. Trace Cleanup
-Write-Host "[*] Cleaning traces..." -ForegroundColor Gray
+if ($proc) {
+    Write-Host "[+] Injecting to $targetProcess (PID: $($proc.Id))..." -ForegroundColor Cyan
+    try {
+        Add-Type -TypeDefinition $Source -ErrorAction SilentlyContinue
+        [Injector]::Inject($proc.Id, $dllPath)
+        Write-Host "****************************************" -ForegroundColor Green
+        Write-Host "    INJECTION SUCCESSFUL - ENJOY!       " -ForegroundColor Green
+        Write-Host "****************************************" -ForegroundColor Green
+    } catch {
+        Write-Host "[-] INJECTION FAILED." -ForegroundColor Red
+    }
+} else {
+    Write-Host "[-] ERROR: Cannot find or start $targetProcess." -ForegroundColor Red
+}
+
+# 9. การลบร่องรอย (Clean Up)
+Write-Host "[*] Finalizing and cleaning up..." -ForegroundColor Gray
 Start-Sleep -Seconds 5
 Remove-Item $workDir -Recurse -Force -ErrorAction SilentlyContinue
 Clear-History -ErrorAction SilentlyContinue
 
-Write-Host "[*] Finished. Closing..." -ForegroundColor DarkGray
-Start-Sleep -Seconds 2
+Write-Host "[*] Done. Closing in 3 seconds..." -ForegroundColor DarkGray
+Start-Sleep -Seconds 3
 exit
