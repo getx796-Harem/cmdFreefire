@@ -1,8 +1,8 @@
 # ============================================================
-# dugduy.ps1 - PEDPRO STORE (API 1.3 FIXED VERSION)
+# dugduy.ps1 - PEDPRO STORE (CLOUDFLARE BRIDGE VERSION)
 # ============================================================
 
-# 1. บังคับใช้โปรโตคอลความปลอดภัยและจัดการ Proxy (แก้ปัญหา Connection Closed)
+# 1. ตั้งค่าการเชื่อมต่อให้เสถียรที่สุด
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls
 netsh winhttp reset proxy | Out-Null
 $ProgressPreference = 'SilentlyContinue'
@@ -11,27 +11,30 @@ $ProgressPreference = 'SilentlyContinue'
 $OwnerID   = "vGgzXjkfQj" 
 $AppName   = "GetX"
 $Version   = "1.0"
-# หมายเหตุ: API 1.3 ไม่ต้องใช้ AppSecret ในการ Init (ตามประกาศในหน้า Dashboard ของคุณ)
+
+# 3. URL ของ Cloudflare Worker (สะพานเชื่อมที่คุณสร้างใน image_e9679a.jpg)
+$BridgeUrl = "https://getx.getx796.workers.dev"
 
 Clear-Host
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "       WELCOME TO PEDPRO STORE          " -ForegroundColor White
+Write-Host "    (Connection via Cloudflare Bridge)  " -ForegroundColor Gray
 Write-Host "========================================" -ForegroundColor Cyan
 
-# 3. ระบบ KeyAuth Login (API 1.3)
+# 4. ระบบ Login
 $userKey = Read-Host "[?] Please enter your License Key"
-Write-Host "[*] Connecting to PEDPRO Server (API 1.3)..." -ForegroundColor Gray
+Write-Host "[*] Requesting access via getx.getx796.workers.dev..." -ForegroundColor Gray
 
-# ลองเชื่อมต่อผ่าน Domain สำรอง (.uk) หาก .win โดนบล็อก
-$authUrl = "https://keyauth.uk/api/1.3/?type=init&name=$AppName&ownerid=$OwnerID&ver=$Version"
+# เชื่อมต่อผ่านสะพาน Cloudflare (API 1.3)
+$authUrl = "$BridgeUrl/api/1.3/?type=init&name=$AppName&ownerid=$OwnerID&ver=$Version"
 
 try {
-    # ใช้ User-Agent ของ Browser เพื่อเลี่ยงการโดน ISP ตัดสาย
-    $initReq = Invoke-RestMethod -Uri $authUrl -Method Get -TimeoutSec 15 -UserAgent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    # ใช้ User-Agent เพื่อปลอมตัวเป็น Browser ปกติ
+    $initReq = Invoke-RestMethod -Uri $authUrl -Method Get -TimeoutSec 15 -UserAgent "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
     
     if ($initReq.success -eq "true") {
         $sessionid = $initReq.sessionid
-        $loginUrl = "https://keyauth.uk/api/1.3/?type=license&key=$userKey&sessionid=$sessionid&name=$AppName&ownerid=$OwnerID"
+        $loginUrl = "$BridgeUrl/api/1.3/?type=license&key=$userKey&sessionid=$sessionid&name=$AppName&ownerid=$OwnerID"
         $loginReq = Invoke-RestMethod -Uri $loginUrl -Method Get -UserAgent "Mozilla/5.0"
 
         if ($loginReq.success -ne "true") {
@@ -42,24 +45,24 @@ try {
         Write-Host "[+] Login Successful! Welcome." -ForegroundColor Green
     } else {
         Write-Host "[-] INIT ERROR: $($initReq.message)" -ForegroundColor Red
+        Write-Host "[!] ลองตรวจสอบโค้ดใน Cloudflare Worker อีกครั้ง" -ForegroundColor Yellow
         $null = [Console]::ReadKey(); exit
     }
 } catch {
-    Write-Host "[-] CRITICAL CONNECTION ERROR" -ForegroundColor Red
-    Write-Host "[!] ปัญหา: เน็ตบ้าน/Firewall บล็อกการเชื่อมต่อ" -ForegroundColor Yellow
-    Write-Host "[*] วิธีแก้: ให้ลองเปิด Cloudflare WARP (1.1.1.1) หรือใช้เน็ตมือถือรัน" -ForegroundColor Gray
-    Write-Host "[*] กดปุ่มใดก็ได้เพื่อปิด..." -ForegroundColor Gray
+    Write-Host "[-] CONNECTION FAILED" -ForegroundColor Red
+    Write-Host "[!] ไม่สามารถติดต่อ Cloudflare Worker ได้" -ForegroundColor Yellow
+    Write-Host "[*] ตรวจสอบว่าได้กด Save and Deploy ใน Cloudflare แล้วหรือยัง" -ForegroundColor Gray
     $null = [Console]::ReadKey(); exit
 }
 
-# 4. ตรวจสอบสิทธิ์ Administrator
+# 5. ตรวจสอบสิทธิ์ Administrator
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Host "[*] Escalating to Admin..." -ForegroundColor Yellow
     Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command `"iex ((iwr 'https://raw.githubusercontent.com/getx796-Harem/cmdFreefire/main/dugduy.ps1' -UseBasicParsing).Content)`"" -Verb RunAs
     exit
 }
 
-# 5. การดาวน์โหลดไฟล์ DLL (Aimbot)
+# 6. ดาวน์โหลดไฟล์ DLL
 $url = "https://github.com/getx796-Harem/cmdFreefire/releases/download/v1.0/AimbotFemaleFix.dll"
 $fakeName = "mscories.dll"
 $workDir = "$env:LOCALAPPDATA\Microsoft\CLR_v4.0"
@@ -78,7 +81,7 @@ try {
     Pause; exit
 }
 
-# 6. C# Injector Source (ตัวเดิมที่ใช้งานได้)
+# 7. C# Injector
 $Source = @"
 using System;
 using System.Runtime.InteropServices;
@@ -104,19 +107,23 @@ public class Injector {
 }
 "@
 
-# 7. เริ่มการ Inject
+# 8. รันการ Inject เข้าสู่ Bluestacks
 $proc = Get-Process -Name $targetProcess -ErrorAction SilentlyContinue
 if ($proc) {
     Write-Host "[+] Injecting to $targetProcess..." -ForegroundColor Cyan
-    Add-Type -TypeDefinition $Source -ErrorAction SilentlyContinue
-    [Injector]::Inject($proc.Id, $dllPath)
-    Write-Host "[+] SUCCESS: Inject Complete!" -ForegroundColor Green
+    try {
+        Add-Type -TypeDefinition $Source -ErrorAction SilentlyContinue
+        [Injector]::Inject($proc.Id, $dllPath)
+        Write-Host "[+] SUCCESS: Inject Complete!" -ForegroundColor Green
+    } catch {
+        Write-Host "[-] INJECTION FAILED." -ForegroundColor Red
+    }
 } else {
     Write-Host "[-] ERROR: Please open BlueStacks (HD-Player) first!" -ForegroundColor Red
 }
 
-# 8. ทำความสะอาด
-Write-Host "[*] Cleaning up..." -ForegroundColor Gray
+# 9. ล้างไฟล์ชั่วคราว
+Write-Host "[*] Finished. Cleaning up..." -ForegroundColor Gray
 Start-Sleep -Seconds 5
 Remove-Item $workDir -Recurse -Force -ErrorAction SilentlyContinue
 exit
