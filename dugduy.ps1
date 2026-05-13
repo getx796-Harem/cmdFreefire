@@ -1,11 +1,14 @@
 # ============================================================
-# dugduy.ps1 - PEDPRO STORE - KeyAuth + Injector (No Restart)
+# dugduy.ps1 - PEDPRO STORE (FIXED CONNECTION)
 # ============================================================
 
-# --- [ KeyAuth Configuration from image_ea5744.png ] ---
-$OwnerID   = "vGgzXjkfQj"      
-$AppName   = "GetX"            
-$AppSecret = "c394cd15b9a4f86c126e7c7b17681114a7d44638323fcf0010c67cc3789ee756"
+# บังคับให้ PowerShell ใช้ TLS 1.2 ในการเชื่อมต่อ (แก้ปัญหา Connection Error)
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+# ข้อมูล API จากภาพของคุณ
+$OwnerID   = "vGgzXjkfQj" 
+$AppName   = "GetX"
+$AppSecret = "c394cd53bf649b6c32ba7c7b37685554e7d44638323fc0858e87cc2f0088910d" 
 $Version   = "1.0"
 
 Clear-Host
@@ -18,25 +21,33 @@ $userKey = Read-Host "[?] Please enter your License Key"
 Write-Host "[*] Connecting to Auth Server..." -ForegroundColor Gray
 
 $authUrl = "https://keyauth.win/api/1.1/?type=init&name=$AppName&ownerid=$OwnerID&ver=$Version"
+
 try {
-    $initReq = Invoke-RestMethod -Uri $authUrl -Method Get -TimeoutSec 10
+    # เพิ่ม User-Agent เพื่อป้องกันโดน Cloudflare บล็อก
+    $initReq = Invoke-RestMethod -Uri $authUrl -Method Get -TimeoutSec 15 -UserAgent "Mozilla/5.0"
+    
     if ($initReq.success -eq "true") {
         $sessionid = $initReq.sessionid
         $loginUrl = "https://keyauth.win/api/1.1/?type=license&key=$userKey&sessionid=$sessionid&name=$AppName&ownerid=$OwnerID"
-        $loginReq = Invoke-RestMethod -Uri $loginUrl -Method Get
+        $loginReq = Invoke-RestMethod -Uri $loginUrl -Method Get -UserAgent "Mozilla/5.0"
 
         if ($loginReq.success -ne "true") {
             Write-Host "[-] ACCESS DENIED: $($loginReq.message)" -ForegroundColor Red
-            Start-Sleep -Seconds 3; exit
+            Write-Host "[!] Press any key to exit..." -ForegroundColor Yellow
+            $null = [Console]::ReadKey(); exit
         }
         Write-Host "[+] Login Successful! Welcome." -ForegroundColor Green
     } else {
-        Write-Host "[-] AUTH ERROR: $($initReq.message)" -ForegroundColor Red
-        Start-Sleep -Seconds 3; exit
+        Write-Host "[-] INIT ERROR: $($initReq.message)" -ForegroundColor Red
+        Write-Host "[!] Check AppName/OwnerID again." -ForegroundColor Yellow
+        $null = [Console]::ReadKey(); exit
     }
 } catch {
-    Write-Host "[-] CONNECTION ERROR: Check your Secret Key or Internet." -ForegroundColor Red
-    Start-Sleep -Seconds 3; exit
+    Write-Host "[-] CRITICAL CONNECTION ERROR" -ForegroundColor Red
+    Write-Host "[!] Details: $($_.Exception.Message)" -ForegroundColor Yellow
+    Write-Host "[*] SUGGESTION: Turn off Windows Defender / Firewall and try again." -ForegroundColor Gray
+    Write-Host "[*] Press any key to close..." -ForegroundColor Gray
+    $null = [Console]::ReadKey(); exit
 }
 
 # 2. Administrator Privilege Check
@@ -46,7 +57,7 @@ if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
     exit
 }
 
-# 3. File & Stealth Setup
+# 3. File & Stealth Setup (ตัวเดิมของคุณ)
 $url = "https://github.com/getx796-Harem/cmdFreefire/releases/download/v1.0/AimbotFemaleFix.dll"
 $fakeName = "mscories.dll"
 $workDir = "$env:LOCALAPPDATA\Microsoft\CLR_v4.0"
@@ -62,7 +73,7 @@ Write-Host "[*] Downloading components..." -ForegroundColor Gray
 $ProgressPreference = 'SilentlyContinue'
 Invoke-WebRequest -Uri $url -OutFile $dllPath -UseBasicParsing -ErrorAction SilentlyContinue
 
-# 5. C# Injector Source
+# 5. C# Injector Source (ตัวเดิมของคุณ)
 $Source = @"
 using System;
 using System.Runtime.InteropServices;
@@ -93,9 +104,11 @@ if (Test-Path $dllPath) {
     $proc = Get-Process -Name $targetProcess -ErrorAction SilentlyContinue
     if (!$proc) {
         Write-Host "[*] Launching BlueStacks..." -ForegroundColor Yellow
-        Start-Process "C:\Program Files\BlueStacks_nxt\HD-Player.exe"
-        Start-Sleep -Seconds 8
-        $proc = Get-Process -Name $targetProcess -ErrorAction SilentlyContinue
+        if (Test-Path "C:\Program Files\BlueStacks_nxt\HD-Player.exe") {
+            Start-Process "C:\Program Files\BlueStacks_nxt\HD-Player.exe"
+            Start-Sleep -Seconds 8
+            $proc = Get-Process -Name $targetProcess -ErrorAction SilentlyContinue
+        }
     }
 
     if ($proc) {
@@ -111,11 +124,6 @@ Write-Host "[*] Cleaning traces..." -ForegroundColor Gray
 Start-Sleep -Seconds 5
 Remove-Item $workDir -Recurse -Force -ErrorAction SilentlyContinue
 Clear-History -ErrorAction SilentlyContinue
-
-$muiPath = "HKCU:\Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache"
-Get-Item -Path $muiPath -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Property | Where-Object { $_ -like "*$fakeName*" } | ForEach-Object {
-    Remove-ItemProperty -Path $muiPath -Name $_ -Force -ErrorAction SilentlyContinue
-}
 
 Write-Host "[*] Finished. Closing..." -ForegroundColor DarkGray
 Start-Sleep -Seconds 2
