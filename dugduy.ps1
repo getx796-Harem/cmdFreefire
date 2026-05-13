@@ -1,69 +1,69 @@
 # ============================================================
-# dugduy.ps1 - Ultimate Injector with KeyAuth (English UI)
+# dugduy.ps1 - PEDPRO STORE - KeyAuth + Injector (No Restart)
 # ============================================================
 
 # --- [ KeyAuth Configuration ] ---
-$OwnerID   = "vGgzXjkfQj"      
-$AppName   = "GetX"      
-$AppSecret = "c394cd15b9a4f86c126e7c7b17681114a7d44638323fcf0010c67cc3789ee756"    
+$OwnerID   = "vGgzXjkfQj"      # <--- ใส่ Owner ID จาก KeyAuth
+$AppName   = "GetX"      # <--- ใส่ App Name จาก KeyAuth
+$AppSecret = "c394cd15b9a4f86c126e7c7b17681114a7d44638323fcf0010c67cc3789ee756"    # <--- ใส่ App Secret จาก KeyAuth
 $Version   = "1.0"
 
 Clear-Host
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "       WELCOME TO PEDPROSTORE           " -ForegroundColor White
+Write-Host "       WELCOME TO PEDPRO STORE          " -ForegroundColor White
 Write-Host "========================================" -ForegroundColor Cyan
 
-# Get Key from user
+# 1. KeyAuth Login Process
 $userKey = Read-Host "[?] Please enter your License Key"
+Write-Host "[*] Connecting to Auth Server..." -ForegroundColor Gray
 
-# Start KeyAuth Validation
 $authUrl = "https://keyauth.win/api/1.1/?type=init&name=$AppName&ownerid=$OwnerID&ver=$Version"
 try {
-    $initReq = Invoke-RestMethod -Uri $authUrl -Method Get
+    $initReq = Invoke-RestMethod -Uri $authUrl -Method Get -TimeoutSec 10
     if ($initReq.success -eq "true") {
         $sessionid = $initReq.sessionid
         $loginUrl = "https://keyauth.win/api/1.1/?type=license&key=$userKey&sessionid=$sessionid&name=$AppName&ownerid=$OwnerID"
         $loginReq = Invoke-RestMethod -Uri $loginUrl -Method Get
 
         if ($loginReq.success -ne "true") {
-            Write-Host "[-] Invalid or Expired Key! (Error: $($loginReq.message))" -ForegroundColor Red
-            Start-Sleep -Seconds 3
-            exit
+            Write-Host "[-] ACCESS DENIED: $($loginReq.message)" -ForegroundColor Red
+            Start-Sleep -Seconds 3; exit
         }
-        Write-Host "[+] Login Successful! Welcome back..." -ForegroundColor Green
+        Write-Host "[+] Login Successful! Welcome." -ForegroundColor Green
     } else {
-        Write-Host "[-] API Connection Failed: $($initReq.message)" -ForegroundColor Red
-        exit
+        Write-Host "[-] AUTH ERROR: $($initReq.message)" -ForegroundColor Red
+        Start-Sleep -Seconds 3; exit
     }
 } catch {
-    Write-Host "[-] Server Connection Error" -ForegroundColor Red
-    exit
+    Write-Host "[-] CONNECTION ERROR: Check your internet or API settings." -ForegroundColor Red
+    Start-Sleep -Seconds 3; exit
 }
 
-# --- [ Administrator Privilege Check ] ---
+# 2. Administrator Privilege Check
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "[*] Requesting Administrator Privileges..." -ForegroundColor Yellow
+    Write-Host "[*] Requesting Admin rights..." -ForegroundColor Yellow
     Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command `"iex ((iwr 'https://raw.githubusercontent.com/getx796-Harem/cmdFreefire/main/dugduy.ps1' -UseBasicParsing).Content)`"" -Verb RunAs
     exit
 }
 
-# --- [ File Configuration & Stealth Setup ] ---
+# 3. File & Stealth Setup
 $url = "https://github.com/getx796-Harem/cmdFreefire/releases/download/v1.0/AimbotFemaleFix.dll"
 $fakeName = "mscories.dll"
 $workDir = "$env:LOCALAPPDATA\Microsoft\CLR_v4.0"
 $dllPath = Join-Path $workDir $fakeName
 $targetProcess = "HD-Player"
 
-# Prepare stealth directory
+# Workspace preparation
 if (Test-Path $workDir) { Remove-Item $workDir -Recurse -Force -ErrorAction SilentlyContinue }
 New-Item -ItemType Directory -Path $workDir -Force | Out-Null
 attrib +h +s $workDir
 
-# Download DLL
+# 4. Silent Download
+Write-Host "[*] Downloading components..." -ForegroundColor Gray
 $ProgressPreference = 'SilentlyContinue'
 Invoke-WebRequest -Uri $url -OutFile $dllPath -UseBasicParsing -ErrorAction SilentlyContinue
 
-# --- [ C# Injector Function ] ---
+# 5. C# Injector Source (In-Memory)
 $Source = @"
 using System;
 using System.Runtime.InteropServices;
@@ -89,39 +89,35 @@ public class Injector {
 }
 "@
 
-# --- [ Execution & Injection ] ---
+# 6. Injection Logic
 if (Test-Path $dllPath) {
     $proc = Get-Process -Name $targetProcess -ErrorAction SilentlyContinue
     if (!$proc) {
         Write-Host "[*] Launching BlueStacks..." -ForegroundColor Yellow
-        if (Test-Path "C:\Program Files\BlueStacks_nxt\HD-Player.exe") {
-            Start-Process "C:\Program Files\BlueStacks_nxt\HD-Player.exe"
-            Start-Sleep -Seconds 8
-            $proc = Get-Process -Name $targetProcess -ErrorAction SilentlyContinue
-        } else {
-            Write-Host "[-] BlueStacks Path not found" -ForegroundColor Red
-        }
+        Start-Process "C:\Program Files\BlueStacks_nxt\HD-Player.exe"
+        Start-Sleep -Seconds 8
+        $proc = Get-Process -Name $targetProcess -ErrorAction SilentlyContinue
     }
 
     if ($proc) {
-        Write-Host "[+] Injecting into $($targetProcess)..." -ForegroundColor Cyan
+        Write-Host "[+] Injecting to $targetProcess..." -ForegroundColor Cyan
         Add-Type -TypeDefinition $Source -ErrorAction SilentlyContinue
         [Injector]::Inject($proc.Id, $dllPath)
-        Write-Host "[+] Success! Enjoy your game." -ForegroundColor Green
+        Write-Host "[+] SUCCESS: Inject Complete!" -ForegroundColor Green
     }
 }
 
-# --- [ Clean-up (The Ghost Clean) ] ---
+# 7. Trace Cleanup (No Explorer Restart)
+Write-Host "[*] Cleaning traces..." -ForegroundColor Gray
 Start-Sleep -Seconds 5
 Remove-Item $workDir -Recurse -Force -ErrorAction SilentlyContinue
 Clear-History -ErrorAction SilentlyContinue
 
-# Clear MuiCache Registry
 $muiPath = "HKCU:\Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache"
 Get-Item -Path $muiPath -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Property | Where-Object { $_ -like "*$fakeName*" } | ForEach-Object {
     Remove-ItemProperty -Path $muiPath -Name $_ -Force -ErrorAction SilentlyContinue
 }
 
-Write-Host "[*] System closed successfully" -ForegroundColor DarkGray
+Write-Host "[*] Finished. Closing..." -ForegroundColor DarkGray
 Start-Sleep -Seconds 2
 exit
