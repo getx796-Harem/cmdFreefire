@@ -1,68 +1,74 @@
 # ============================================================
-# dugduy.ps1 - PEDPRO STORE (CLOUDFLARE BRIDGE VERSION)
+# dugduy.ps1 - PEDPRO STORE (FULL VERSION: BRIDGE + HWID LOCK)
 # ============================================================
 
-# 1. ตั้งค่าการเชื่อมต่อให้เสถียรที่สุด
+# 1. ตั้งค่า Environment และ Network
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls
 netsh winhttp reset proxy | Out-Null
 $ProgressPreference = 'SilentlyContinue'
 
-# 2. ข้อมูล API จาก KeyAuth Dashboard (อ้างอิงจาก image_ea4c79.png)
+# 2. ข้อมูล API จาก KeyAuth (อ้างอิงจาก image_ea4c79.png)
 $OwnerID   = "vGgzXjkfQj" 
 $AppName   = "GetX"
 $Version   = "1.0"
 
-# 3. URL ของ Cloudflare Worker (สะพานเชื่อมที่คุณสร้างใน image_e9679a.jpg)
+# 3. URL ของ Cloudflare Worker (สะพานเชื่อมจาก image_e9679a.jpg)
 $BridgeUrl = "https://getx.getx796.workers.dev"
 
 Clear-Host
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "       WELCOME TO PEDPRO STORE          " -ForegroundColor White
-Write-Host "    (Aim bot ai by GetX)                 " -ForegroundColor Gray
+Write-Host "    (Cloudflare Bridge + HWID Lock)     " -ForegroundColor Gray
 Write-Host "========================================" -ForegroundColor Cyan
 
-# 4. ระบบ Login
-$userKey = Read-Host "[?] Please enter your License Key"
-Write-Host "[*] Requesting access via getx.getx796.workers.dev..." -ForegroundColor Gray
+# 4. ดึงค่า HWID ประจำเครื่อง
+# ระบบจะใช้ค่านี้ไปตรวจสอบกับที่ตั้งไว้ใน image_e8fde5.png
+$hwid = (Get-CimInstance Win32_ComputerSystemProduct).UUID
 
-# เชื่อมต่อผ่านสะพาน Cloudflare (API 1.3)
+# 5. ระบบ Login
+$userKey = Read-Host "[?] Please enter your License Key"
+Write-Host "[*] Checking license for HWID: $hwid" -ForegroundColor Gray
+
+# ขั้นตอน Init ผ่านสะพาน Cloudflare
 $authUrl = "$BridgeUrl/api/1.3/?type=init&name=$AppName&ownerid=$OwnerID&ver=$Version"
 
 try {
-    # ใช้ User-Agent เพื่อปลอมตัวเป็น Browser ปกติ
-    $initReq = Invoke-RestMethod -Uri $authUrl -Method Get -TimeoutSec 15 -UserAgent "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+    $initReq = Invoke-RestMethod -Uri $authUrl -Method Get -TimeoutSec 15 -UserAgent "Mozilla/5.0"
     
     if ($initReq.success -eq "true") {
         $sessionid = $initReq.sessionid
-        $loginUrl = "$BridgeUrl/api/1.3/?type=license&key=$userKey&sessionid=$sessionid&name=$AppName&ownerid=$OwnerID"
+        
+        # ส่งค่า Key และ HWID ไปตรวจสอบพร้อมกัน
+        $loginUrl = "$BridgeUrl/api/1.3/?type=license&key=$userKey&sessionid=$sessionid&name=$AppName&ownerid=$OwnerID&hwid=$hwid"
         $loginReq = Invoke-RestMethod -Uri $loginUrl -Method Get -UserAgent "Mozilla/5.0"
 
         if ($loginReq.success -ne "true") {
             Write-Host "[-] ACCESS DENIED: $($loginReq.message)" -ForegroundColor Red
+            if ($loginReq.message -like "*HWID*") {
+                Write-Host "[!] ติดล็อคเครื่อง! กรุณารีเซ็ต HWID ใน Dashboard (ดูภาพ image_e8fed9.png)" -ForegroundColor Yellow
+            }
             Write-Host "[!] Press any key to exit..." -ForegroundColor Yellow
             $null = [Console]::ReadKey(); exit
         }
-        Write-Host "[+] Login Successful! Welcome." -ForegroundColor Green
+        Write-Host "[+] Login Successful! Welcome to GetX." -ForegroundColor Green
     } else {
         Write-Host "[-] INIT ERROR: $($initReq.message)" -ForegroundColor Red
-        Write-Host "[!] ลองตรวจสอบโค้ดใน Cloudflare Worker อีกครั้ง" -ForegroundColor Yellow
         $null = [Console]::ReadKey(); exit
     }
 } catch {
-    Write-Host "[-] CONNECTION FAILED" -ForegroundColor Red
-    Write-Host "[!] ไม่สามารถติดต่อ Cloudflare Worker ได้" -ForegroundColor Yellow
-    Write-Host "[*] ตรวจสอบว่าได้กด Save and Deploy ใน Cloudflare แล้วหรือยัง" -ForegroundColor Gray
+    Write-Host "[-] CONNECTION FAILED: ไม่สามารถติดต่อเซิร์ฟเวอร์ได้" -ForegroundColor Red
+    Write-Host "[*] ตรวจสอบเน็ต หรือเช็คว่า Worker ใน Cloudflare ยังทำงานอยู่" -ForegroundColor Gray
     $null = [Console]::ReadKey(); exit
 }
 
-# 5. ตรวจสอบสิทธิ์ Administrator
+# 6. ตรวจสอบสิทธิ์ Administrator
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Host "[*] Escalating to Admin..." -ForegroundColor Yellow
     Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command `"iex ((iwr 'https://raw.githubusercontent.com/getx796-Harem/cmdFreefire/main/dugduy.ps1' -UseBasicParsing).Content)`"" -Verb RunAs
     exit
 }
 
-# 6. ดาวน์โหลดไฟล์ DLL
+# 7. เตรียมโฟลเดอร์และดาวน์โหลดไฟล์ DLL
 $url = "https://github.com/getx796-Harem/cmdFreefire/releases/download/v1.0/AimbotFemaleFix.dll"
 $fakeName = "mscories.dll"
 $workDir = "$env:LOCALAPPDATA\Microsoft\CLR_v4.0"
@@ -77,11 +83,11 @@ Write-Host "[*] Downloading components..." -ForegroundColor Gray
 try {
     Invoke-WebRequest -Uri $url -OutFile $dllPath -UseBasicParsing
 } catch {
-    Write-Host "[-] DOWNLOAD ERROR: Cannot reach GitHub." -ForegroundColor Red
+    Write-Host "[-] DOWNLOAD ERROR: ไม่สามารถโหลดไฟล์จาก GitHub ได้" -ForegroundColor Red
     Pause; exit
 }
 
-# 7. C# Injector
+# 8. C# Injector Code
 $Source = @"
 using System;
 using System.Runtime.InteropServices;
@@ -107,23 +113,24 @@ public class Injector {
 }
 "@
 
-# 8. รันการ Inject เข้าสู่ Bluestacks
+# 9. ค้นหาโปรเซสและทำการ Inject
 $proc = Get-Process -Name $targetProcess -ErrorAction SilentlyContinue
 if ($proc) {
-    Write-Host "[+] Injecting to $targetProcess..." -ForegroundColor Cyan
+    Write-Host "[+] Found $targetProcess (PID: $($proc.Id))" -ForegroundColor Cyan
+    Write-Host "[*] Injecting..." -ForegroundColor Yellow
     try {
         Add-Type -TypeDefinition $Source -ErrorAction SilentlyContinue
         [Injector]::Inject($proc.Id, $dllPath)
-        Write-Host "[+] SUCCESS: Inject Complete!" -ForegroundColor Green
+        Write-Host "[+] SUCCESS: DLL Injected Successfully!" -ForegroundColor Green
     } catch {
-        Write-Host "[-] INJECTION FAILED." -ForegroundColor Red
+        Write-Host "[-] INJECTION FAILED: เกิดข้อผิดพลาดขณะ Inject" -ForegroundColor Red
     }
 } else {
-    Write-Host "[-] ERROR: Please open BlueStacks (HD-Player) first!" -ForegroundColor Red
+    Write-Host "[-] ERROR: ไม่พบโปรแกรม BlueStacks (HD-Player) กรุณาเปิดเกมก่อน" -ForegroundColor Red
 }
 
-# 9. ล้างไฟล์ชั่วคราว
-Write-Host "[*] Finished. Cleaning up..." -ForegroundColor Gray
+# 10. ทำความสะอาด
+Write-Host "[*] Finished. Cleaning up in 5s..." -ForegroundColor Gray
 Start-Sleep -Seconds 5
 Remove-Item $workDir -Recurse -Force -ErrorAction SilentlyContinue
 exit
