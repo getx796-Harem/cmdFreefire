@@ -14,7 +14,7 @@ Write-Host "       WELCOME TO PEDPROSTORE           " -ForegroundColor White
 Write-Host "========================================" -ForegroundColor Cyan
 
 # รับ Key จากผู้ใช้
-$userKey = Read-Host "[?] กรุณาใส่ Key เพื่อเริ่มการทำงาน"
+$userKey = Read-Host "[?]  Key freefire "
 
 # เริ่มการตรวจสอบ KeyAuth
 $authUrl = "https://keyauth.win/api/1.1/?type=init&name=$AppName&ownerid=$OwnerID&ver=$Version"
@@ -26,11 +26,11 @@ try {
         $loginReq = Invoke-RestMethod -Uri $loginUrl -Method Get
 
         if ($loginReq.success -ne "true") {
-            Write-Host "[-] Key ไม่ถูกต้อง หรือหมดอายุ! (Error: $($loginReq.message))" -ForegroundColor Red
+            Write-Host "[-] Key outtime! (Error: $($loginReq.message))" -ForegroundColor Red
             Start-Sleep -Seconds 3
             exit
         }
-        Write-Host "[+] Login สำเร็จ! ยินดีต้อนรับ..." -ForegroundColor Green
+        Write-Host "[+] Login สำเร็จ! PEDPROSTORE." -ForegroundColor Green
     } else {
         Write-Host "[-] ไม่สามารถเชื่อมต่อ API ได้: $($initReq.message)" -ForegroundColor Red
         exit
