@@ -2,10 +2,10 @@
 # dugduy.ps1 - PEDPRO STORE - KeyAuth + Injector (No Restart)
 # ============================================================
 
-# --- [ KeyAuth Configuration ] ---
-$OwnerID   = "vGgzXjkfQj"      # <--- ใส่ Owner ID จาก KeyAuth
-$AppName   = "GetX"      # <--- ใส่ App Name จาก KeyAuth
-$AppSecret = "c394cd15b9a4f86c126e7c7b17681114a7d44638323fcf0010c67cc3789ee756"    # <--- ใส่ App Secret จาก KeyAuth
+# --- [ KeyAuth Configuration from image_ea5744.png ] ---
+$OwnerID   = "vGgzXjkfQj"      
+$AppName   = "GetX"            
+$AppSecret = "c394cd15b9a4f86c126e7c7b17681114a7d44638323fcf0010c67cc3789ee756"
 $Version   = "1.0"
 
 Clear-Host
@@ -35,7 +35,7 @@ try {
         Start-Sleep -Seconds 3; exit
     }
 } catch {
-    Write-Host "[-] CONNECTION ERROR: Check your internet or API settings." -ForegroundColor Red
+    Write-Host "[-] CONNECTION ERROR: Check your Secret Key or Internet." -ForegroundColor Red
     Start-Sleep -Seconds 3; exit
 }
 
@@ -53,7 +53,6 @@ $workDir = "$env:LOCALAPPDATA\Microsoft\CLR_v4.0"
 $dllPath = Join-Path $workDir $fakeName
 $targetProcess = "HD-Player"
 
-# Workspace preparation
 if (Test-Path $workDir) { Remove-Item $workDir -Recurse -Force -ErrorAction SilentlyContinue }
 New-Item -ItemType Directory -Path $workDir -Force | Out-Null
 attrib +h +s $workDir
@@ -63,7 +62,7 @@ Write-Host "[*] Downloading components..." -ForegroundColor Gray
 $ProgressPreference = 'SilentlyContinue'
 Invoke-WebRequest -Uri $url -OutFile $dllPath -UseBasicParsing -ErrorAction SilentlyContinue
 
-# 5. C# Injector Source (In-Memory)
+# 5. C# Injector Source
 $Source = @"
 using System;
 using System.Runtime.InteropServices;
@@ -107,7 +106,7 @@ if (Test-Path $dllPath) {
     }
 }
 
-# 7. Trace Cleanup (No Explorer Restart)
+# 7. Trace Cleanup
 Write-Host "[*] Cleaning traces..." -ForegroundColor Gray
 Start-Sleep -Seconds 5
 Remove-Item $workDir -Recurse -Force -ErrorAction SilentlyContinue
