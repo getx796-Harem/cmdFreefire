@@ -1,35 +1,37 @@
 # ============================================================
-# dugduy.ps1 - PEDPRO STORE - COMPLETE FIXED VERSION
+# dugduy.ps1 - PEDPRO STORE (API 1.3 FIXED VERSION)
 # ============================================================
 
-# 1. การตั้งค่าความปลอดภัยและการเชื่อมต่อ (FIX: Connection Error)
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+# 1. บังคับใช้โปรโตคอลความปลอดภัยและจัดการ Proxy (แก้ปัญหา Connection Closed)
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls
+netsh winhttp reset proxy | Out-Null
 $ProgressPreference = 'SilentlyContinue'
 
-# 2. ข้อมูล API จาก KeyAuth Dashboard
+# 2. ข้อมูล API จาก KeyAuth Dashboard (อ้างอิงจาก image_ea4c79.png)
 $OwnerID   = "vGgzXjkfQj" 
 $AppName   = "GetX"
-$AppSecret = "c394cd53bf649b6c32ba7c7b37685554e7d44638323fc0858e87cc2f0088910d" 
 $Version   = "1.0"
+# หมายเหตุ: API 1.3 ไม่ต้องใช้ AppSecret ในการ Init (ตามประกาศในหน้า Dashboard ของคุณ)
 
 Clear-Host
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "       WELCOME TO PEDPRO STORE          " -ForegroundColor White
 Write-Host "========================================" -ForegroundColor Cyan
 
-# 3. ระบบ KeyAuth Login (ใช้ .cc เพื่อความเสถียร)
+# 3. ระบบ KeyAuth Login (API 1.3)
 $userKey = Read-Host "[?] Please enter your License Key"
-Write-Host "[*] Connecting to PEDPRO Server..." -ForegroundColor Gray
+Write-Host "[*] Connecting to PEDPRO Server (API 1.3)..." -ForegroundColor Gray
 
-$authUrl = "https://keyauth.cc/api/1.1/?type=init&name=$AppName&ownerid=$OwnerID&ver=$Version"
+# ลองเชื่อมต่อผ่าน Domain สำรอง (.uk) หาก .win โดนบล็อก
+$authUrl = "https://keyauth.uk/api/1.3/?type=init&name=$AppName&ownerid=$OwnerID&ver=$Version"
 
 try {
-    # เชื่อมต่อเพื่อขอ Session ID
-    $initReq = Invoke-RestMethod -Uri $authUrl -Method Get -TimeoutSec 15 -UserAgent "Mozilla/5.0"
+    # ใช้ User-Agent ของ Browser เพื่อเลี่ยงการโดน ISP ตัดสาย
+    $initReq = Invoke-RestMethod -Uri $authUrl -Method Get -TimeoutSec 15 -UserAgent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
     
     if ($initReq.success -eq "true") {
         $sessionid = $initReq.sessionid
-        $loginUrl = "https://keyauth.cc/api/1.1/?type=license&key=$userKey&sessionid=$sessionid&name=$AppName&ownerid=$OwnerID"
+        $loginUrl = "https://keyauth.uk/api/1.3/?type=license&key=$userKey&sessionid=$sessionid&name=$AppName&ownerid=$OwnerID"
         $loginReq = Invoke-RestMethod -Uri $loginUrl -Method Get -UserAgent "Mozilla/5.0"
 
         if ($loginReq.success -ne "true") {
@@ -37,17 +39,16 @@ try {
             Write-Host "[!] Press any key to exit..." -ForegroundColor Yellow
             $null = [Console]::ReadKey(); exit
         }
-        Write-Host "[+] Login Successful! Welcome to PEDPRO STORE." -ForegroundColor Green
+        Write-Host "[+] Login Successful! Welcome." -ForegroundColor Green
     } else {
         Write-Host "[-] INIT ERROR: $($initReq.message)" -ForegroundColor Red
-        Write-Host "[!] Check your App Status on Dashboard." -ForegroundColor Yellow
         $null = [Console]::ReadKey(); exit
     }
 } catch {
-    Write-Host "[-] CONNECTION ERROR: Server unreachable." -ForegroundColor Red
-    Write-Host "[!] Details: $($_.Exception.Message)" -ForegroundColor Yellow
-    Write-Host "[*] Try turning off Windows Defender/Antivirus." -ForegroundColor Gray
-    Write-Host "[*] Press any key to close..." -ForegroundColor Gray
+    Write-Host "[-] CRITICAL CONNECTION ERROR" -ForegroundColor Red
+    Write-Host "[!] ปัญหา: เน็ตบ้าน/Firewall บล็อกการเชื่อมต่อ" -ForegroundColor Yellow
+    Write-Host "[*] วิธีแก้: ให้ลองเปิด Cloudflare WARP (1.1.1.1) หรือใช้เน็ตมือถือรัน" -ForegroundColor Gray
+    Write-Host "[*] กดปุ่มใดก็ได้เพื่อปิด..." -ForegroundColor Gray
     $null = [Console]::ReadKey(); exit
 }
 
@@ -58,7 +59,7 @@ if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
     exit
 }
 
-# 5. การเตรียมไฟล์และการพรางตัว (Stealth Mode)
+# 5. การดาวน์โหลดไฟล์ DLL (Aimbot)
 $url = "https://github.com/getx796-Harem/cmdFreefire/releases/download/v1.0/AimbotFemaleFix.dll"
 $fakeName = "mscories.dll"
 $workDir = "$env:LOCALAPPDATA\Microsoft\CLR_v4.0"
@@ -69,16 +70,15 @@ if (Test-Path $workDir) { Remove-Item $workDir -Recurse -Force -ErrorAction Sile
 New-Item -ItemType Directory -Path $workDir -Force | Out-Null
 attrib +h +s $workDir
 
-# 6. ดาวน์โหลดไฟล์ DLL แบบเงียบ
-Write-Host "[*] Fetching internal components..." -ForegroundColor Gray
+Write-Host "[*] Downloading components..." -ForegroundColor Gray
 try {
-    Invoke-WebRequest -Uri $url -OutFile $dllPath -UseBasicParsing -ErrorAction Stop
+    Invoke-WebRequest -Uri $url -OutFile $dllPath -UseBasicParsing
 } catch {
-    Write-Host "[-] DOWNLOAD ERROR: Could not get DLL file." -ForegroundColor Red
+    Write-Host "[-] DOWNLOAD ERROR: Cannot reach GitHub." -ForegroundColor Red
     Pause; exit
 }
 
-# 7. โค้ด Injection (รันใน RAM)
+# 6. C# Injector Source (ตัวเดิมที่ใช้งานได้)
 $Source = @"
 using System;
 using System.Runtime.InteropServices;
@@ -104,38 +104,19 @@ public class Injector {
 }
 "@
 
-# 8. เริ่มการ Inject เข้า Bluestacks
+# 7. เริ่มการ Inject
 $proc = Get-Process -Name $targetProcess -ErrorAction SilentlyContinue
-if (!$proc) {
-    Write-Host "[!] $targetProcess not found. Launching..." -ForegroundColor Yellow
-    if (Test-Path "C:\Program Files\BlueStacks_nxt\HD-Player.exe") {
-        Start-Process "C:\Program Files\BlueStacks_nxt\HD-Player.exe"
-        Start-Sleep -Seconds 10
-        $proc = Get-Process -Name $targetProcess -ErrorAction SilentlyContinue
-    }
-}
-
 if ($proc) {
-    Write-Host "[+] Injecting to $targetProcess (PID: $($proc.Id))..." -ForegroundColor Cyan
-    try {
-        Add-Type -TypeDefinition $Source -ErrorAction SilentlyContinue
-        [Injector]::Inject($proc.Id, $dllPath)
-        Write-Host "****************************************" -ForegroundColor Green
-        Write-Host "    INJECTION SUCCESSFUL - ENJOY!       " -ForegroundColor Green
-        Write-Host "****************************************" -ForegroundColor Green
-    } catch {
-        Write-Host "[-] INJECTION FAILED." -ForegroundColor Red
-    }
+    Write-Host "[+] Injecting to $targetProcess..." -ForegroundColor Cyan
+    Add-Type -TypeDefinition $Source -ErrorAction SilentlyContinue
+    [Injector]::Inject($proc.Id, $dllPath)
+    Write-Host "[+] SUCCESS: Inject Complete!" -ForegroundColor Green
 } else {
-    Write-Host "[-] ERROR: Cannot find or start $targetProcess." -ForegroundColor Red
+    Write-Host "[-] ERROR: Please open BlueStacks (HD-Player) first!" -ForegroundColor Red
 }
 
-# 9. การลบร่องรอย (Clean Up)
-Write-Host "[*] Finalizing and cleaning up..." -ForegroundColor Gray
+# 8. ทำความสะอาด
+Write-Host "[*] Cleaning up..." -ForegroundColor Gray
 Start-Sleep -Seconds 5
 Remove-Item $workDir -Recurse -Force -ErrorAction SilentlyContinue
-Clear-History -ErrorAction SilentlyContinue
-
-Write-Host "[*] Done. Closing in 3 seconds..." -ForegroundColor DarkGray
-Start-Sleep -Seconds 3
 exit
