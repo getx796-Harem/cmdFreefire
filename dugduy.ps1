@@ -18,7 +18,7 @@ $BridgeUrl = "https://getx.getx796.workers.dev"
 Clear-Host
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "       WELCOME TO PEDPRO STORE          " -ForegroundColor White
-Write-Host "    (Connection via Cloudflare Bridge)  " -ForegroundColor Gray
+Write-Host "    (Aim bot ai by GetX)                 " -ForegroundColor Gray
 Write-Host "========================================" -ForegroundColor Cyan
 
 # 4. ระบบ Login
