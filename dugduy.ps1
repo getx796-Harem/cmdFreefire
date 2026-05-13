@@ -5,7 +5,7 @@
 # --- [ ส่วนการตั้งค่า KeyAuth ] ---
 $OwnerID   = "vGgzXjkfQj"      # <--- แก้ไขตรงนี้
 $AppName   = "Getx796's Application"      # <--- แก้ไขตรงนี้
-$AppSecret = "49e80daafa86c7d152c75184ddbcf1b0004e7c09d1b082fdd3c889e292a561e5"    # <--- แก้ไขตรงนี้
+$AppSecret = "c394cd15b9a4f86c126e7c7b17681114a7d44638323fcf0010c67cc3789ee756"    # <--- แก้ไขตรงนี้
 $Version   = "1.0"
 
 Clear-Host
