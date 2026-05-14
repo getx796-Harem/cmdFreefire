@@ -18,7 +18,7 @@ $BridgeUrl = "https://getx.getx796.workers.dev"
 Clear-Host
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "       WELCOME TO PEDPRO STORE          " -ForegroundColor White
-Write-Host "    (Cloudflare Bridge + HWID Lock)     " -ForegroundColor Gray
+Write-Host "    (heeeeeeeeeeeeeeeeeeeeeeeeee)     " -ForegroundColor Gray
 Write-Host "========================================" -ForegroundColor Cyan
 
 # 4. ดึงค่า HWID ประจำเครื่อง
