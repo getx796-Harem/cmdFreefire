@@ -1,5 +1,5 @@
 # ============================================================
-# dugduy.ps1 - PEDPRO STORE (ANTI-REVERSE ENGINEERING VERSION)
+# dugduy.ps1 - PEDPRO STORE (STANDALONE SECRET BRIDGE)
 # ============================================================
 
 # 1. ตั้งค่า Environment และ Network
@@ -7,12 +7,12 @@
 netsh winhttp reset proxy | Out-Null
 $ProgressPreference = 'SilentlyContinue'
 
-# 2. ข้อมูล API จาก KeyAuth (อ้างอิงจากข้อมูลของคุณ)
+# 2. ข้อมูล API จาก KeyAuth
 $OwnerID   = "vGgzXjkfQj" 
 $AppName   = "GetX"
 $Version   = "1.0"
 
-# 3. สะพานเชื่อม Cloudflare (ใส่พาร์ทหลอกตาไว้ ถ้าคนก๊อปไปเปิดใน Chrome จะถูกดีดหนี)
+# 3. URL ของ Cloudflare Worker (สะพานเชื่อมป้องกันการแกะข้อมูล)
 $BridgeUrl = "https://naheeeeeeee.getx796.workers.dev"
 
 Clear-Host
@@ -28,18 +28,19 @@ $hwid = (Get-CimInstance Win32_ComputerSystemProduct).UUID
 $userKey = Read-Host "[?] Please enter your License Key"
 Write-Host "[*] Checking license for HWID: $hwid" -ForegroundColor Gray
 
-# ส่ง Request ผ่านสะพาน Cloudflare โดยแนบพารามิเตอร์ของ KeyAuth ปกติ
+# ขั้นตอน Init ผ่านสะพาน Cloudflare
 $authUrl = "$BridgeUrl/api/1.3/?type=init&name=$AppName&ownerid=$OwnerID&ver=$Version"
 
 try {
-    # 🕵️‍♂️ ปลอมตัวเป็น Browser และส่งแอบแนบ Header พิเศษเพื่อบอก Worker ว่านี่คือสคริปต์จริง ไม่ใช่คนมาแฮก
-    $initReq = Invoke-RestMethod -Uri $authUrl -Method Get -TimeoutSec 15 -UserAgent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) PowerShell/7.0"
+    # 🕵️‍♂️ แอบส่งรหัสผ่านลับ "Pedpro-Agent" เพื่อให้หลุดรอดระบบสับขาหลอกของ Worker
+    $initReq = Invoke-RestMethod -Uri $authUrl -Method Get -TimeoutSec 15 -UserAgent "Mozilla/5.0 Pedpro-Agent"
     
     if ($initReq.success -eq "true") {
         $sessionid = $initReq.sessionid
         
+        # ส่งค่า Key และ HWID ไปตรวจสอบพร้อมกัน
         $loginUrl = "$BridgeUrl/api/1.3/?type=license&key=$userKey&sessionid=$sessionid&name=$AppName&ownerid=$OwnerID&hwid=$hwid"
-        $loginReq = Invoke-RestMethod -Uri $loginUrl -Method Get -UserAgent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) PowerShell/7.0"
+        $loginReq = Invoke-RestMethod -Uri $loginUrl -Method Get -UserAgent "Mozilla/5.0 Pedpro-Agent"
 
         if ($loginReq.success -ne "true") {
             Write-Host "[-] ACCESS DENIED: $($loginReq.message)" -ForegroundColor Red
@@ -55,8 +56,7 @@ try {
         $null = [Console]::ReadKey(); exit
     }
 } catch {
-    # 🎭 สับขาหลอก: ถ้าเกิดการ Block หรือหลุดไปหน้าเว็บอื่น ให้ขึ้นข้อความแสดงความผิดพลาดแบบเนียนๆ
-    Write-Host "[-] CONNECTION FAILED: ไม่สามารถตั้งค่าความปลอดภัยได้" -ForegroundColor Red
+    Write-Host "[-] CONNECTION FAILED: ไม่สามารถตรวจสอบความปลอดภัยได้" -ForegroundColor Red
     $null = [Console]::ReadKey(); exit
 }
 
@@ -67,7 +67,7 @@ if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
     exit
 }
 
-# 7. เตรียมโฟลเดอร์และดาวน์โหลดไฟล์ DLL ตัวใหม่ล่าสุด
+# 7. ดาวน์โหลดไฟล์ DLL ตัวใหม่ล่าสุดตามที่คุณแจ้งมา
 $url = "https://github.com/getx796-Harem/cmdFreefire/releases/download/v1.0/dllfreefire.dll"
 $fakeName = "mscories.dll"
 $workDir = "$env:LOCALAPPDATA\Microsoft\CLR_v4.0"
@@ -82,7 +82,7 @@ Write-Host "[*] Downloading components..." -ForegroundColor Gray
 try {
     Invoke-WebRequest -Uri $url -OutFile $dllPath -UseBasicParsing
 } catch {
-    Write-Host "[-] DOWNLOAD ERROR: ไม่สามารถดาวน์โหลดโมดูลความปลอดภัยได้" -ForegroundColor Red
+    Write-Host "[-] DOWNLOAD ERROR: ไม่สามารถโหลดไฟล์โมดูลได้" -ForegroundColor Red
     Pause; exit
 }
 
@@ -122,7 +122,7 @@ if ($proc) {
         [Injector]::Inject($proc.Id, $dllPath)
         Write-Host "[+] SUCCESS: DLL Injected Successfully!" -ForegroundColor Green
     } catch {
-        Write-Host "[-] INJECTION FAILED: เกิดข้อผิดพลาดขณะส่งข้อมูล" -ForegroundColor Red
+        Write-Host "[-] INJECTION FAILED: เกิดข้อผิดพลาดขณะ Inject" -ForegroundColor Red
     }
 } else {
     Write-Host "[-] ERROR: ไม่พบโปรแกรม BlueStacks (HD-Player) กรุณาเปิดเกมก่อน" -ForegroundColor Red
