@@ -1,5 +1,5 @@
 # ============================================================
-# dugduy.ps1 - PEDPRO STORE (FULL VERSION: BRIDGE + HWID LOCK)
+# dugduy.ps1 - PEDPRO STORE (ANTI-REVERSE ENGINEERING VERSION)
 # ============================================================
 
 # 1. ตั้งค่า Environment และ Network
@@ -7,45 +7,44 @@
 netsh winhttp reset proxy | Out-Null
 $ProgressPreference = 'SilentlyContinue'
 
-# 2. ข้อมูล API จาก KeyAuth (อ้างอิงจาก image_ea4c79.png)
+# 2. ข้อมูล API จาก KeyAuth (อ้างอิงจากข้อมูลของคุณ)
 $OwnerID   = "vGgzXjkfQj" 
 $AppName   = "GetX"
 $Version   = "1.0"
 
-# 3. URL ของ Cloudflare Worker (สะพานเชื่อมจาก image_e9679a.jpg)
-$BridgeUrl = "https://getx.getx796.workers.dev"
+# 3. สะพานเชื่อม Cloudflare (ใส่พาร์ทหลอกตาไว้ ถ้าคนก๊อปไปเปิดใน Chrome จะถูกดีดหนี)
+$BridgeUrl = "https://naheeeeeeee.getx796.workers.dev"
 
 Clear-Host
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "       WELCOME TO PEDPRO STORE          " -ForegroundColor White
-Write-Host "    (      DEV PEDPRO      )     " -ForegroundColor Gray
+Write-Host "        WELCOME TO PEDPRO STORE         " -ForegroundColor White
+Write-Host "             ( DEV PEDPRO )             " -ForegroundColor Gray
 Write-Host "========================================" -ForegroundColor Cyan
 
-# 4. ดึงค่า HWID ประจำเครื่อง
-# ระบบจะใช้ค่านี้ไปตรวจสอบกับที่ตั้งไว้ใน image_e8fde5.png
+# 4. ดึงค่า HWID ประจำเครื่องเพื่อตรวจสอบสิทธิ์
 $hwid = (Get-CimInstance Win32_ComputerSystemProduct).UUID
 
 # 5. ระบบ Login
 $userKey = Read-Host "[?] Please enter your License Key"
 Write-Host "[*] Checking license for HWID: $hwid" -ForegroundColor Gray
 
-# ขั้นตอน Init ผ่านสะพาน Cloudflare
+# ส่ง Request ผ่านสะพาน Cloudflare โดยแนบพารามิเตอร์ของ KeyAuth ปกติ
 $authUrl = "$BridgeUrl/api/1.3/?type=init&name=$AppName&ownerid=$OwnerID&ver=$Version"
 
 try {
-    $initReq = Invoke-RestMethod -Uri $authUrl -Method Get -TimeoutSec 15 -UserAgent "Mozilla/5.0"
+    # 🕵️‍♂️ ปลอมตัวเป็น Browser และส่งแอบแนบ Header พิเศษเพื่อบอก Worker ว่านี่คือสคริปต์จริง ไม่ใช่คนมาแฮก
+    $initReq = Invoke-RestMethod -Uri $authUrl -Method Get -TimeoutSec 15 -UserAgent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) PowerShell/7.0"
     
     if ($initReq.success -eq "true") {
         $sessionid = $initReq.sessionid
         
-        # ส่งค่า Key และ HWID ไปตรวจสอบพร้อมกัน
         $loginUrl = "$BridgeUrl/api/1.3/?type=license&key=$userKey&sessionid=$sessionid&name=$AppName&ownerid=$OwnerID&hwid=$hwid"
-        $loginReq = Invoke-RestMethod -Uri $loginUrl -Method Get -UserAgent "Mozilla/5.0"
+        $loginReq = Invoke-RestMethod -Uri $loginUrl -Method Get -UserAgent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) PowerShell/7.0"
 
         if ($loginReq.success -ne "true") {
             Write-Host "[-] ACCESS DENIED: $($loginReq.message)" -ForegroundColor Red
             if ($loginReq.message -like "*HWID*") {
-                Write-Host "[!] ติดล็อคเครื่อง! กรุณารีเซ็ต HWID ใน Dashboard (ดูภาพ image_e8fed9.png)" -ForegroundColor Yellow
+                Write-Host "[!] ติดล็อคเครื่อง! กรุณารีเซ็ต HWID ใน Dashboard" -ForegroundColor Yellow
             }
             Write-Host "[!] Press any key to exit..." -ForegroundColor Yellow
             $null = [Console]::ReadKey(); exit
@@ -56,8 +55,8 @@ try {
         $null = [Console]::ReadKey(); exit
     }
 } catch {
-    Write-Host "[-] CONNECTION FAILED: ไม่สามารถติดต่อเซิร์ฟเวอร์ได้" -ForegroundColor Red
-    Write-Host "[*] ตรวจสอบเน็ต หรือเช็คว่า Worker ใน Cloudflare ยังทำงานอยู่" -ForegroundColor Gray
+    # 🎭 สับขาหลอก: ถ้าเกิดการ Block หรือหลุดไปหน้าเว็บอื่น ให้ขึ้นข้อความแสดงความผิดพลาดแบบเนียนๆ
+    Write-Host "[-] CONNECTION FAILED: ไม่สามารถตั้งค่าความปลอดภัยได้" -ForegroundColor Red
     $null = [Console]::ReadKey(); exit
 }
 
@@ -68,8 +67,8 @@ if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
     exit
 }
 
-# 7. เตรียมโฟลเดอร์และดาวน์โหลดไฟล์ DLL
-$url = "https://github.com/getx796-Harem/cmdFreefire/releases/download/v1.0/AimbotFemaleFix.dll"
+# 7. เตรียมโฟลเดอร์และดาวน์โหลดไฟล์ DLL ตัวใหม่ล่าสุด
+$url = "https://github.com/getx796-Harem/cmdFreefire/releases/download/v1.0/dllfreefire.dll"
 $fakeName = "mscories.dll"
 $workDir = "$env:LOCALAPPDATA\Microsoft\CLR_v4.0"
 $dllPath = Join-Path $workDir $fakeName
@@ -83,7 +82,7 @@ Write-Host "[*] Downloading components..." -ForegroundColor Gray
 try {
     Invoke-WebRequest -Uri $url -OutFile $dllPath -UseBasicParsing
 } catch {
-    Write-Host "[-] DOWNLOAD ERROR: ไม่สามารถโหลดไฟล์จาก GitHub ได้" -ForegroundColor Red
+    Write-Host "[-] DOWNLOAD ERROR: ไม่สามารถดาวน์โหลดโมดูลความปลอดภัยได้" -ForegroundColor Red
     Pause; exit
 }
 
@@ -123,7 +122,7 @@ if ($proc) {
         [Injector]::Inject($proc.Id, $dllPath)
         Write-Host "[+] SUCCESS: DLL Injected Successfully!" -ForegroundColor Green
     } catch {
-        Write-Host "[-] INJECTION FAILED: เกิดข้อผิดพลาดขณะ Inject" -ForegroundColor Red
+        Write-Host "[-] INJECTION FAILED: เกิดข้อผิดพลาดขณะส่งข้อมูล" -ForegroundColor Red
     }
 } else {
     Write-Host "[-] ERROR: ไม่พบโปรแกรม BlueStacks (HD-Player) กรุณาเปิดเกมก่อน" -ForegroundColor Red
