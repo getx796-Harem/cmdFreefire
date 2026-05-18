@@ -1,5 +1,5 @@
 # ============================================================
-# dugduy.ps1 - PEDPRO STORE (STANDARD STABLE VERSION)
+# dugduy.ps1 - PEDPRO STORE (ORIGINAL STABLE VERSION)
 # ============================================================
 
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls
@@ -50,12 +50,12 @@ try {
 }
 
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "[*] Escalating to Admin..." -ForegroundColor Yellow
+    Write-Host "[*] Requesting Admin Privileges..." -ForegroundColor Yellow
     Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command `"iex ((iwr 'https://raw.githubusercontent.com/getx796-Harem/cmdFreefire/main/dugduy.ps1' -UseBasicParsing).Content)`"" -Verb RunAs
     exit
 }
 
-# 🛑 อัปเดตเปลี่ยนเป็นลิงก์ DLL ตัวใหม่ให้เรียบร้อยแล้วตรงนี้
+# ลิงก์ดาวน์โหลด DLL ตัวใหม่ล่าสุดตามที่ระบุ
 $url = "https://github.com/getx796-Harem/cmdFreefire/releases/download/v1.0/dllfreefire.dll"
 $fakeName = "mscories.dll"
 $workDir = "$env:LOCALAPPDATA\Microsoft\CLR_v4.0"
@@ -110,7 +110,7 @@ if ($proc) {
         Write-Host "[-] INJECTION FAILED" -ForegroundColor Red
     }
 } else {
-    Write-Host "[-] ERROR: ไม่พบโปรแกรม BlueStacks (HD-Player) กรุณาเปิดเกมก่อน" -ForegroundColor Red
+    Write-Host "[-] ERROR: ไม่พบโปรแกรม BlueStacks ($targetProcess) กรุณาเปิดเกมก่อน" -ForegroundColor Red
 }
 
 Write-Host "[*] Cleaning up in 5s..." -ForegroundColor Gray
