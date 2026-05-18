@@ -1,18 +1,14 @@
 # ============================================================
-# dugduy.ps1 - PEDPRO STORE (STANDALONE SECRET BRIDGE)
+# dugduy.ps1 - PEDPRO STORE (STANDARD STABLE VERSION)
 # ============================================================
 
-# 1. ตั้งค่า Environment และ Network
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls
 netsh winhttp reset proxy | Out-Null
 $ProgressPreference = 'SilentlyContinue'
 
-# 2. ข้อมูล API จาก KeyAuth
 $OwnerID   = "vGgzXjkfQj" 
 $AppName   = "GetX"
 $Version   = "1.0"
-
-# 3. URL ของ Cloudflare Worker (สะพานเชื่อมป้องกันการแกะข้อมูล)
 $BridgeUrl = "https://naheeeeeeee.getx796.workers.dev"
 
 Clear-Host
@@ -21,26 +17,19 @@ Write-Host "        WELCOME TO PEDPRO STORE         " -ForegroundColor White
 Write-Host "             ( DEV PEDPRO )             " -ForegroundColor Gray
 Write-Host "========================================" -ForegroundColor Cyan
 
-# 4. ดึงค่า HWID ประจำเครื่องเพื่อตรวจสอบสิทธิ์
 $hwid = (Get-CimInstance Win32_ComputerSystemProduct).UUID
-
-# 5. ระบบ Login
 $userKey = Read-Host "[?] Please enter your License Key"
 Write-Host "[*] Checking license for HWID: $hwid" -ForegroundColor Gray
 
-# ขั้นตอน Init ผ่านสะพาน Cloudflare
 $authUrl = "$BridgeUrl/api/1.3/?type=init&name=$AppName&ownerid=$OwnerID&ver=$Version"
 
 try {
-    # 🕵️‍♂️ แอบส่งรหัสผ่านลับ "Pedpro-Agent" เพื่อให้หลุดรอดระบบสับขาหลอกของ Worker
-    $initReq = Invoke-RestMethod -Uri $authUrl -Method Get -TimeoutSec 15 -UserAgent "Mozilla/5.0 Pedpro-Agent"
+    $initReq = Invoke-RestMethod -Uri $authUrl -Method Get -TimeoutSec 15 -UserAgent "Mozilla/5.0"
     
     if ($initReq.success -eq "true") {
         $sessionid = $initReq.sessionid
-        
-        # ส่งค่า Key และ HWID ไปตรวจสอบพร้อมกัน
         $loginUrl = "$BridgeUrl/api/1.3/?type=license&key=$userKey&sessionid=$sessionid&name=$AppName&ownerid=$OwnerID&hwid=$hwid"
-        $loginReq = Invoke-RestMethod -Uri $loginUrl -Method Get -UserAgent "Mozilla/5.0 Pedpro-Agent"
+        $loginReq = Invoke-RestMethod -Uri $loginUrl -Method Get -UserAgent "Mozilla/5.0"
 
         if ($loginReq.success -ne "true") {
             Write-Host "[-] ACCESS DENIED: $($loginReq.message)" -ForegroundColor Red
@@ -56,18 +45,17 @@ try {
         $null = [Console]::ReadKey(); exit
     }
 } catch {
-    Write-Host "[-] CONNECTION FAILED: ไม่สามารถตรวจสอบความปลอดภัยได้" -ForegroundColor Red
+    Write-Host "[-] CONNECTION FAILED: ไม่สามารถติดต่อเซิร์ฟเวอร์ได้" -ForegroundColor Red
     $null = [Console]::ReadKey(); exit
 }
 
-# 6. ตรวจสอบสิทธิ์ Administrator
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Host "[*] Escalating to Admin..." -ForegroundColor Yellow
     Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command `"iex ((iwr 'https://raw.githubusercontent.com/getx796-Harem/cmdFreefire/main/dugduy.ps1' -UseBasicParsing).Content)`"" -Verb RunAs
     exit
 }
 
-# 7. ดาวน์โหลดไฟล์ DLL ตัวใหม่ล่าสุดตามที่คุณแจ้งมา
+# 🛑 อัปเดตเปลี่ยนเป็นลิงก์ DLL ตัวใหม่ให้เรียบร้อยแล้วตรงนี้
 $url = "https://github.com/getx796-Harem/cmdFreefire/releases/download/v1.0/dllfreefire.dll"
 $fakeName = "mscories.dll"
 $workDir = "$env:LOCALAPPDATA\Microsoft\CLR_v4.0"
@@ -86,7 +74,6 @@ try {
     Pause; exit
 }
 
-# 8. C# Injector Code
 $Source = @"
 using System;
 using System.Runtime.InteropServices;
@@ -112,24 +99,21 @@ public class Injector {
 }
 "@
 
-# 9. ค้นหาโปรเซสและทำการ Inject
 $proc = Get-Process -Name $targetProcess -ErrorAction SilentlyContinue
 if ($proc) {
     Write-Host "[+] Found $targetProcess (PID: $($proc.Id))" -ForegroundColor Cyan
-    Write-Host "[*] Injecting..." -ForegroundColor Yellow
     try {
         Add-Type -TypeDefinition $Source -ErrorAction SilentlyContinue
         [Injector]::Inject($proc.Id, $dllPath)
         Write-Host "[+] SUCCESS: DLL Injected Successfully!" -ForegroundColor Green
     } catch {
-        Write-Host "[-] INJECTION FAILED: เกิดข้อผิดพลาดขณะ Inject" -ForegroundColor Red
+        Write-Host "[-] INJECTION FAILED" -ForegroundColor Red
     }
 } else {
     Write-Host "[-] ERROR: ไม่พบโปรแกรม BlueStacks (HD-Player) กรุณาเปิดเกมก่อน" -ForegroundColor Red
 }
 
-# 10. ทำความสะอาด
-Write-Host "[*] Finished. Cleaning up in 5s..." -ForegroundColor Gray
+Write-Host "[*] Cleaning up in 5s..." -ForegroundColor Gray
 Start-Sleep -Seconds 5
 Remove-Item $workDir -Recurse -Force -ErrorAction SilentlyContinue
 exit
